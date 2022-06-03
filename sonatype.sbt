@@ -1,35 +1,13 @@
-sonatypeProfileName := "org.xerial"
+import xerial.sbt.Sonatype._
 
-pomExtra := {
-  <url>http://xerial.org/</url>
-    <licenses>
-      <license>
-        <name>Apache 2</name>
-        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      </license>
-    </licenses>
-    <scm>
-      <connection>scm:git:github.com/xerial/sbt-pack.git</connection>
-      <developerConnection>scm:git:git@github.com:xerial/sbt-pack.git</developerConnection>
-      <url>https://github.com/xerial/sbt-pack</url>
-    </scm>
-    <developers>
-      <developer>
-        <id>leo</id>
-        <name>Taro L. Saito</name>
-        <url>http://xerial.org/leo</url>
-      </developer>
-    </developers>
-}
+publishMavenStyle      := true
+sonatypeProfileName    := "org.xerial"
+sonatypeProjectHosting := Some(GitHubHosting(user = "xerial", repository = "sbt-pack", email = "leo@xerial.org"))
+developers := List(
+  Developer(id = "leo", name = "Taro L. Saito", email = "leo@xerial.org", url = url("http://xerial.org/leo"))
+)
+licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
 
-// Add sonatype repository settings
-publishTo := {
-  val nexus = "https://maven.xstack.cc/"
-  Some {
-    if (version.value.trim.contains("-")) "snapshots" at nexus + "content/repositories/feidao-snapshot/"
-    else "releases" at nexus + "repository/maven-releases/"
-  }
-}
+publishTo := sonatypePublishToBundle.value
 
 dynverSonatypeSnapshots in ThisBuild := true
-credentials += Credentials(Path.userHome / ".sbt" / "sonatype_credential")

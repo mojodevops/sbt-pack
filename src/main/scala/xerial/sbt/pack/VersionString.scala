@@ -9,9 +9,9 @@ package xerial.sbt.pack
 
 import scala.util.{Success, Try}
 
-/**
-  * Class to represent version strings
-  * @author Christian Hoffmeister
+/** Class to represent version strings
+  * @author
+  *   Christian Hoffmeister
   */
 case class VersionString(numbers: List[String], suffix: Option[String]) {
   def major = numbers.head

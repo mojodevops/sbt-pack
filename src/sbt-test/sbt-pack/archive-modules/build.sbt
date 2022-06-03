@@ -3,9 +3,9 @@ import xerial.sbt.pack.PackPlugin._
 
 val commonSettings = Defaults.coreDefaultSettings ++
   Seq(
-    scalaVersion := "2.12.6",
-    version := "0.1",
-    crossPaths := false
+    scalaVersion := "2.12.14",
+    version      := "0.1",
+    crossPaths   := false
   )
 
 lazy val root =
@@ -36,4 +36,16 @@ lazy val module2 = Project(
   .settings(publishPackArchives)
   .settings(
     libraryDependencies += "org.xerial.snappy" % "snappy-java" % "1.1.1.6"
+  )
+
+// Empty archive stem test
+lazy val module3 = Project(
+  id = "module3",
+  base = file("module3")
+).enablePlugins(PackPlugin)
+  .settings(commonSettings)
+  .settings(publishPackArchives)
+  .settings(
+    libraryDependencies += "org.xerial.snappy" % "snappy-java" % "1.1.1.6",
+    packArchiveStem                           := ""
   )

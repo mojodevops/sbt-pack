@@ -56,9 +56,10 @@ Now you can use `sbt pack` command in your project.
 
 #### Full build configuration
 
-Import `xerial.sbt.Pack.packAutoSettings` into your project settings (Since version 0.6.2). sbt-pack finds main classes in your code and generates programs for them accordingly. The main classes must be Scala objects that define `def main(args:Array[])` method. The program names are the main classes names, hyphenized. (For example, main class `myprog.ExampleProg` gives program name `example-prog`.) 
+sbt-pack will generate launcher scripts for calling `def main(args:Array[String]): Unit` method. You can manually set the `packMain` variable to specify mappings from launcher scripts to their corresponding main classes (for example `packMain := Map("hello" -> "myprog.Hello")`) will create `target/pack/bin/hello` script and it will call `myprog.Hello` method. 
 
-Alternatively, import `xerial.sbt.Pack.packSettings` instead of `xerial.sbt.Pack.packAutoSettings`. The main classes in your program will then not be guessed. Manually set the `packMain` variable, a mapping from your program names to their corresponding main classes (for example `packMain := Map("hello" -> "myprog.Hello")`).   
+If `packMain` setting is missing, sbt-pack will find main classes in your code and generates launcher scripts for them. The main classes must be Scala objects that define `def main(args:Array[])` method. The program names will be the main classes names, hyphenized. (For example, main class `myprog.ExampleProg` gives program name `example-prog`.) 
+
 
 **build.sbt**
 
@@ -91,11 +92,16 @@ packJarNameConvention := "default",
 // [Optional] Patterns of jar file names to exclude in pack
 packExcludeJars := Seq("scala-.*\\.jar")
 
+// [Optional] Generate a text file containing the list of copied jars.
+packJarListFile := Some("lib/jars.mf")
+
 // [Optional] List full class paths in the launch scripts (default is false) (since 0.5.1)
 packExpandedClasspath := false
 // [Optional] Resource directory mapping to be copied within target/pack. Default is Map("{projectRoot}/src/pack" -> "") 
 packResourceDir += (baseDirectory.value / "web" -> "web-content")
 
+// [Optional] Environment variables
+packEnvVars := Map("hello" -> Map("key1" -> "value1", "key2" -> "value2"))
 
 // To publish tar.gz, zip archives to the repository, add the following lines:
 import xerial.sbt.pack.PackPlugin._
@@ -103,6 +109,9 @@ publishPackArchives
 
 // Publish only tar.gz archive. To publish another type of archive, use publishPackArchive(xxx) instead
 //publishPackArchiveTgz
+
+// [Optional] Set a root folder name of archive contents. (defualt is (project-name)-(version). Setting this to an empty string is useful for packaging projects for AWS lambda. 
+packArchiveStem := ""
 ```
 
 **src/main/scala/Hello.scala**

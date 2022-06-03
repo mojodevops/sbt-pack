@@ -1,27 +1,25 @@
+Global / onChangedBuildSource := ReloadOnSourceChanges
+
 enablePlugins(SbtTwirl)
 enablePlugins(SbtPlugin)
 
-//organization := "org.xerial.sbt"
-organization := "cc.xstack"
-organizationName := "Xerial project"
-name := "sbt-pack"
-version := "0.12.1-SNAPSHOT"
+organization         := "org.xerial.sbt"
+organizationName     := "Xerial project"
+name                 := "sbt-pack"
 organizationHomepage := Some(new URL("http://xerial.org/"))
-description := "A sbt plugin for packaging distributable Scala code"
+description          := "A sbt plugin for packaging distributable Scala code"
 
-publishMavenStyle := true
+publishMavenStyle       := true
 publishArtifact in Test := false
 
 pomIncludeRepository := { _ =>
   false
 }
 
-crossSbtVersions := Vector("1.2.8", "0.13.17")
-
-scalaVersion in ThisBuild := "2.12.8"
+ThisBuild / scalaVersion := "2.12.14"
 
 parallelExecution := true
-crossPaths := false
+crossPaths        := false
 scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked")
 
 scriptedBufferLog := false
@@ -35,9 +33,9 @@ scriptedLaunchOpts ++= {
 }
 
 libraryDependencies ++= Seq(
-  "org.slf4j"            % "slf4j-simple"     % "1.7.30",
-  "org.apache.commons"   % "commons-compress" % "1.19",
-  "org.scalatra.scalate" %% "scalate-core"    % "1.9.5",
-  "org.tukaani"          % "xz"               % "1.8",
-  "org.specs2"           %% "specs2-core"     % "4.8.1" % "test"
+  "org.slf4j"             % "slf4j-simple"     % "1.7.36",
+  "org.apache.commons"    % "commons-compress" % "1.21",
+  "org.scalatra.scalate" %% "scalate-core"     % "1.9.8",
+  "org.tukaani"           % "xz"               % "1.9",
+  "org.specs2"           %% "specs2-core"      % "4.8.2" % "test"
 )
