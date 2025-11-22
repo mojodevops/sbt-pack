@@ -1,4 +1,4 @@
-sbt-pack plugin [![Build Status](https://travis-ci.org/xerial/sbt-pack.svg?branch=master)](https://travis-ci.org/xerial/sbt-pack) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.sbt/sbt-pack/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.sbt/sbt-pack)
+sbt-pack plugin [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.xerial.sbt/sbt-pack/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.xerial.sbt/sbt-pack)
 ========
 
 A sbt plugin for creating distributable Scala packages that include dependent jars and launch scripts.
@@ -38,7 +38,7 @@ Add `sbt-pack` plugin to your sbt configuration:
 addSbtPlugin("org.xerial.sbt" % "sbt-pack" % "(version)")  
 ```
 
-Repository URL: http://repo1.maven.org/maven2/org/xerial/sbt/
+Repository URL: https://repo1.maven.org/maven2/org/xerial/sbt/
 
 #### Minimum configuration
 
@@ -76,6 +76,24 @@ packMain := Map("hello" -> "myprog.Hello")
 // [Optional] JVM options of scripts (program name -> Seq(JVM option, ...))
 packJvmOpts := Map("hello" -> Seq("-Xmx512m"))
 
+// [Optional] Java version-specific JVM options (since 0.22)
+// The launch scripts will detect the Java version and apply appropriate options
+// Options are applied as version ranges: 
+// - Java 8-10 will get the options for version 8
+// - Java 11-16 will get the options for version 11
+// - Java 17-20 will get the options for version 17
+// - Java 21-23 will get the options for version 21
+// - Java 24+ will get the options for version 24
+packJvmVersionSpecificOpts := Map(
+  "hello" -> Map(
+    8  -> Seq("-XX:MaxPermSize=256m"),              // Applied for Java [8,11)
+    11 -> Seq("-XX:+UseJVMCICompiler"),             // Applied for Java [11,17)
+    17 -> Seq("-XX:+UseZGC"),                       // Applied for Java [17,21)
+    21 -> Seq("-XX:+UseZGC", "-XX:+ZGenerational"), // Applied for Java [21,24)
+    24 -> Seq("--sun-misc-unsafe-memory-access=allow") // Applied for Java [24,∞)
+  )
+)
+
 // [Optional] Extra class paths to look when launching a program. You can use ${PROG_HOME} to specify the base directory
 packExtraClasspath := Map("hello" -> Seq("${PROG_HOME}/etc")) 
 
@@ -104,7 +122,6 @@ packResourceDir += (baseDirectory.value / "web" -> "web-content")
 packEnvVars := Map("hello" -> Map("key1" -> "value1", "key2" -> "value2"))
 
 // To publish tar.gz, zip archives to the repository, add the following lines:
-import xerial.sbt.pack.PackPlugin._
 publishPackArchives
 
 // Publish only tar.gz archive. To publish another type of archive, use publishPackArchive(xxx) instead
@@ -212,8 +229,8 @@ packMain := Map("myapp"->"org.yourdomain.MyApp")
 
 **Dockerfile**
 ```
-# Using an Alpine Linux based JDK image
-FROM anapsix/alpine-java:8u131b11_jdk
+# Using JDK17 from Amazon Corretto
+FROM amazoncorretto:17
 
 COPY target/pack /srv/myapp
 
@@ -249,8 +266,7 @@ For releasing:
 
 ```
 $ ./sbt
-# cross tests for sbt 0.13 and 1.1
-> ^ scripted
-> ^ publishSigned
-> sonatypeReleaseAll
+> scripted
+> publishSigned
+> sonatypeBundleRelease
 ```

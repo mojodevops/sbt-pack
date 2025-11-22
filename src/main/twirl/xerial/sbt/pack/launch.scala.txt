@@ -60,16 +60,16 @@ case "`uname`" in
              JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/${JAVA_VERSION}/Home
            fi
            JAVA_OPTS="$JAVA_OPTS -Xdock:name=\"${PROG_NAME}\" -Xdock:icon=\"$PROG_HOME/@(opts.MAC_ICON_FILE)\" -Dapple.laf.useScreenMenuBar=true"
-           JAVACMD="`which java`"
+           JAVACMD="`command -v java`"
            ;;
 esac
 
 # Resolve JAVA_HOME from javac command path
 if [ -z "$JAVA_HOME" ]; then
-  javaExecutable="`which javac`"
+  javaExecutable="`command -v javac`"
   if [ -n "$javaExecutable" -a -f "$javaExecutable" -a ! "`expr \"$javaExecutable\" : '\([^ ]*\)'`" = "no" ]; then
     # readlink(1) is not available as standard on Solaris 10.
-    readLink=`which readlink`
+    readLink=`command -v readlink`
     if [ ! `expr "$readLink" : '\([^ ]*\)'` = "no" ]; then
       javaExecutable="`readlink -f \"$javaExecutable\"`"
       javaHome="`dirname \"$javaExecutable\"`"
@@ -90,7 +90,7 @@ if [ -z "$JAVACMD" ] ; then
       JAVACMD="$JAVA_HOME/bin/java"
     fi
   else
-    JAVACMD="`which java`"
+    JAVACMD="`command -v java`"
   fi
 fi
 
@@ -103,6 +103,39 @@ fi
 if [ -z "$JAVA_HOME" ] ; then
   echo "Warning: JAVA_HOME environment variable is not set." 1>&2
 fi
+
+# Detect Java version for version-specific options
+getJavaVersion() {
+  java_cmd="$1"
+  str=$("$java_cmd" -version 2>&1 | grep -E -e '(java|openjdk) version' | head -n 1 | awk '{ print $3 }' | tr -d '"')
+  
+  # java -version on java8 says 1.8.x
+  # but on 9 and 10 it's 9.x.y and 10.x.y.
+  case "$str" in
+    1.*)
+      echo "$str" | cut -d'.' -f2
+      ;;
+    *)
+      echo "$str" | cut -d'.' -f1 | cut -d'-' -f1
+      ;;
+  esac
+}
+
+JAVA_VERSION=$(getJavaVersion "$JAVACMD")
+
+# Add version-specific JVM options using range matching
+# Options are applied based on version ranges: if versions 21 and 24 are specified,
+# then [21,24) gets opts for 21, [24,∞) gets opts for 24
+@if(opts.JVM_VERSION_OPTS.nonEmpty) {
+@for(version <- opts.JVM_VERSION_OPTS.keys.toList.sorted) {
+if [ "$JAVA_VERSION" -ge @version ]; then
+  VERSION_OPTS="@opts.JVM_VERSION_OPTS(version)"
+fi
+}
+if [ -n "$VERSION_OPTS" ]; then
+  JAVA_OPTS="$JAVA_OPTS $VERSION_OPTS"
+fi
+}
 
 CLASSPATH_SUFFIX=""
 # Path separator used in EXTRA_CLASSPATH

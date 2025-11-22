@@ -1,25 +1,26 @@
 package xerial.sbt.pack
 
-import java.io._
-
-import org.apache.commons.compress.archivers._
-import org.apache.commons.compress.archivers.tar._
-import org.apache.commons.compress.archivers.zip._
+import java.io.*
+import org.apache.commons.compress.archivers.*
+import org.apache.commons.compress.archivers.tar.*
+import org.apache.commons.compress.archivers.zip.*
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream
-import org.apache.commons.compress.utils.IOUtils
-import sbt.Keys._
-import sbt._
+import org.apache.commons.io.IOUtils
+import sbt.Keys.*
+import sbt.*
+import PluginCompat.*
+import PluginCompat.toFile
 
 trait PackArchive {
 
   import PackPlugin.autoImport._
 
-  private def createArchive(
+  private def createArchive[EntryType <: ArchiveEntry](
       archiveSuffix: String,
-      createOutputStream: (OutputStream) => ArchiveOutputStream,
-      createEntry: (File, String, File) => ArchiveEntry
+      createOutputStream: (OutputStream) => ArchiveOutputStream[EntryType],
+      createEntry: (File, String, File) => EntryType
   ) = Def.task {
     val out                    = streams.value
     val targetDir: File        = packTargetDir.value
@@ -33,7 +34,7 @@ trait PackArchive {
     val excludeFiles = packArchiveExcludes.value.toSet
     def addFilesToArchive(dir: File): Unit =
       Option(dir.listFiles)
-        .getOrElse(Array.empty)
+        .getOrElse(Array.empty[File])
         .filterNot(f => excludeFiles.contains(rpath(distDir, f)))
         .foreach { file =>
           aos.putArchiveEntry(createEntry(file, archiveBaseDir ++ rpath(distDir, file, "/"), binDir))
@@ -56,21 +57,22 @@ trait PackArchive {
     targetDir / archiveName
   }
 
-  private def createTarEntry(file: File, fileName: String, binDir: File) = {
+  private def createTarEntry(file: File, fileName: String, binDir: File): TarArchiveEntry = {
     val archiveEntry = new TarArchiveEntry(file, fileName)
-    if (file.getAbsolutePath startsWith binDir.getAbsolutePath)
+    if (file.getAbsolutePath.startsWith(binDir.getAbsolutePath)) {
       archiveEntry.setMode(Integer.parseInt("0755", 8))
+    }
     archiveEntry
   }
 
-  private def createTarArchiveOutputStream(os: OutputStream) = {
+  private def createTarArchiveOutputStream(os: OutputStream): TarArchiveOutputStream = {
     val tos = new TarArchiveOutputStream(os)
     tos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX)
     tos.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX)
     tos
   }
 
-  private def createZipEntry(file: File, fileName: String, binDir: File) = {
+  private def createZipEntry(file: File, fileName: String, binDir: File): ZipArchiveEntry = {
     val archiveEntry = new ZipArchiveEntry(file, fileName)
     if (file.getAbsolutePath.startsWith(binDir.getAbsolutePath)) {
       archiveEntry.setUnixMode(Integer.parseInt("0755", 8))
@@ -78,7 +80,7 @@ trait PackArchive {
     archiveEntry
   }
 
-  lazy val packArchiveSettings = Seq[Def.Setting[_]](
+  lazy val packArchiveSettings = Seq[Def.Setting[?]](
     packArchivePrefix      := name.value,
     packArchiveName        := s"${packArchivePrefix.value}-${version.value}",
     packArchiveStem        := s"${packArchiveName.value}",
@@ -87,44 +89,44 @@ trait PackArchive {
     packArchiveTbzArtifact := Artifact(packArchivePrefix.value, "arch", "tar.bz2"),
     packArchiveTxzArtifact := Artifact(packArchivePrefix.value, "arch", "tar.xz"),
     packArchiveZipArtifact := Artifact(packArchivePrefix.value, "arch", "zip"),
-    packArchiveTgz := createArchive(
-      "tar.gz",
-      (fos) => createTarArchiveOutputStream(new GzipCompressorOutputStream(fos)),
-      createTarEntry
-    ).value,
-    packArchiveTbz := createArchive(
-      "tar.bz2",
-      (fos) => createTarArchiveOutputStream(new BZip2CompressorOutputStream(fos)),
-      createTarEntry
-    ).value,
-    packArchiveTxz := createArchive(
-      "tar.xz",
-      (fos) => createTarArchiveOutputStream(new XZCompressorOutputStream(fos)),
-      createTarEntry
-    ).value,
-    packArchiveZip := createArchive("zip", new ZipArchiveOutputStream(_), createZipEntry).value,
-    packArchive    := Seq(packArchiveTgz.value, packArchiveZip.value)
+    Def.derive(
+      packArchiveTgz := createArchive[TarArchiveEntry](
+        "tar.gz",
+        (fos) => createTarArchiveOutputStream(new GzipCompressorOutputStream(fos)),
+        createTarEntry
+      ).value
+    ),
+    Def.derive(
+      packArchiveTbz := createArchive[TarArchiveEntry](
+        "tar.bz2",
+        (fos) => createTarArchiveOutputStream(new BZip2CompressorOutputStream(fos)),
+        createTarEntry
+      ).value
+    ),
+    Def.derive(
+      packArchiveTxz := createArchive[TarArchiveEntry](
+        "tar.xz",
+        (fos) => createTarArchiveOutputStream(new XZCompressorOutputStream(fos)),
+        createTarEntry
+      ).value
+    ),
+    Def.derive(
+      packArchiveZip := createArchive[ZipArchiveEntry]("zip", new ZipArchiveOutputStream(_), createZipEntry).value
+    ),
+    Def.derive(packArchive := Seq(packArchiveTgz.value, packArchiveZip.value))
   )
 
-  def publishPackArchiveTgz: SettingsDefinition = Seq(
-    artifacts += packArchiveTgzArtifact.value,
-    packagedArtifacts += packArchiveTgzArtifact.value -> packArchiveTgz.value
-  )
+  def publishPackArchiveTgz: SettingsDefinition =
+    addArtifact(Def.setting(packArchiveTgzArtifact.value), Runtime / packArchiveTgz)
 
-  def publishPackArchiveTbz: SettingsDefinition = Seq(
-    artifacts += packArchiveTbzArtifact.value,
-    packagedArtifacts += packArchiveTbzArtifact.value -> packArchiveTbz.value
-  )
+  def publishPackArchiveTbz: SettingsDefinition =
+    addArtifact(Def.setting(packArchiveTbzArtifact.value), Runtime / packArchiveTbz)
 
-  def publishPackArchiveTxz: SettingsDefinition = Seq(
-    artifacts += packArchiveTxzArtifact.value,
-    packagedArtifacts += packArchiveTxzArtifact.value -> packArchiveTxz.value
-  )
+  def publishPackArchiveTxz: SettingsDefinition =
+    addArtifact(Def.setting(packArchiveTxzArtifact.value), Runtime / packArchiveTxz)
 
-  def publishPackArchiveZip: SettingsDefinition = Seq(
-    artifacts += packArchiveZipArtifact.value,
-    packagedArtifacts += packArchiveZipArtifact.value -> packArchiveZip.value
-  )
+  def publishPackArchiveZip: SettingsDefinition =
+    addArtifact(Def.setting(packArchiveZipArtifact.value), Runtime / packArchiveZip)
 
   def publishPackArchives: SettingsDefinition =
     publishPackArchiveTgz ++ publishPackArchiveZip

@@ -1,5 +1,14 @@
 ### Release Notes
 
+Note: See https://github.com/xerial/sbt-pack/releases for future relase notes
+
+## 0.16
+  - Remove unnecessary dependencies to slf4j
+  - Upgrade various dependency versions
+
+## 0.15
+  - Update dependencies to use scala-xml 2.x
+
 ## 0.14
   - packArchiveStem := "" setting can be used for creating package for AWS Lambda
   - Add packEnvVars setting for setting environment variables
